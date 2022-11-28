@@ -18,6 +18,9 @@ class Instagram {
     path_to_save = path.join('./content', dayjs().format('DD_MM_YYYY'))
     
     selectors = {
+        profile: {
+            header_btns: 'main header button',
+        },
         login: {
             user_input: 'input[name="username"]',
             pass_input: 'input[name="password"]',
@@ -30,6 +33,9 @@ class Instagram {
             description: '._a9zr ._a9zs > span',
             image: 'article[role="presentation"] div._aagv img',
             close_btn: 'svg.x1lliihq.x1n2onr6',
+        },
+        chat : {
+            textarea: 'section textarea[placeholder="Message..."]',
         }
     }
 
@@ -130,8 +136,8 @@ class Instagram {
         await this.page.type(pass_input, this.pass);
         await this.page.click(submit)
 
+    
         const cookies = JSON.stringify(await this.page.cookies());
-        const sessionStorage = await this.page.evaluate(() =>JSON.stringify(sessionStorage));
         const localStorage = await this.page.evaluate(() => JSON.stringify(localStorage));
       
         fs.writeFile("./session/cookies.json", cookies, ()=>{});
@@ -141,22 +147,26 @@ class Instagram {
         await this.page.waitForNavigation();
     }
 
-    async chat(profileUrl, msg){
+    async chat(profile_slug, msg){
         
-        await this.page.goto(profileUrl);
+        await this.page.goto(`https://www.instagram.com/${profile_slug}/`);
 
-        //const [button] = await page.$x("//button[contains(., 'Message')]");
+        await this.page.waitForSelector(this.selectors.profile.header_btns)
 
-        /*if(button){
-            await button.click()   
+        const [_, msg_btn ] = await this.page.$$(
+            this.selectors.profile.header_btns
+        );
+
+        if(msg_btn){
+            await msg_btn.click()   
         }
-        //await this.page.waitForSelector('div[role="dialog"]');
         
         await this.page.waitForNavigation()
+        await this.page.waitForSelector(this.selectors.chat.textarea)
 
-        await this.page.waitForSelector('textarea');
-        await this.page.type('textarea', msg);
-        await page.keyboard.press('Enter');*/
+        await this.page.type(this.selectors.chat.textarea, msg);
+        await this.page.keyboard.press('Enter');
+
     }
 
     async closeNotificationModal(){

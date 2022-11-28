@@ -1,30 +1,35 @@
 const fs = require('fs');
 
+const default_encoding = 'utf8';
+
+const evaluateLocalStorage = (data) => {
+    for (const [key, value] of Object.entries(data)) {
+    localStorage[key] = value;
+    }
+}
+
+
 async function loadSession(page){
     try {
 
-        const cookiesString = await fs.readFile("./session/cookies.json");
-        const cookies = JSON.parse(cookiesString);
+        const [ 
+            cookiesString,
+            localStorageString
+        ] = await Promise.all([
+            fs.promises.readFile("./session/cookies.json", default_encoding),
+            fs.promises.readFile("./session/localStorage.json", default_encoding)
+        ])
+        
+       
+        const cookies        = JSON.parse(cookiesString);
+        const localStorage  = JSON.parse(localStorageString);
 
-        const sessionStorageString = await fs.readFile("./session/sessionStorage.json");
-        const sessionStorage = JSON.parse(sessionStorageString);
+        await Promise.all([
+            page.setCookie(...cookies),
+            page.evaluate(evaluateLocalStorage, localStorage),
+        ])
 
-        const localStorageString = await fs.readFile("./session/localStorage.json");
-        const localStorage = JSON.parse(localStorageString);
-
-        await page.setCookie(...cookies);
-
-        await page.evaluate((data) => {
-            for (const [key, value] of Object.entries(data)) {
-            sessionStorage[key] = value;
-            }
-        }, sessionStorage);
-
-        await page.evaluate((data) => {
-            for (const [key, value] of Object.entries(data)) {
-            localStorage[key] = value;
-            }
-        }, sessionStorage);
+        
     } catch(e){
         console.log(e)
     }

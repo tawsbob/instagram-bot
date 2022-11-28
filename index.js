@@ -12,17 +12,21 @@ const { loadSession } = require('./utils');
     
     page.setViewport({ width: 1280, height: 926 });
 
-    await loadSession(page);
+    
     const InstagramBot = new Instagram(browser, page)    
     
 
     //await InstagramBot.login()
-    await InstagramBot.getLastPosts('shedcluboficial', 'https://www.instagram.com/shedcluboficial/')
-    /*await InstagramBot.chat(
-        'https://www.instagram.com/shedcluboficial/',
-        'Enviando uma mensagem qualquer'
-    )*/
+    //await InstagramBot.getLastPosts('shedcluboficial', 'https://www.instagram.com/shedcluboficial/')
+    
+    await page.goto('https://www.instagram.com/')
+    await loadSession(page);
 
+    await InstagramBot.chat(
+        'shedcluboficial',
+        'Olá!'
+    )
+    
    // await browser.close();
   })();
   
