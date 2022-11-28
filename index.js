@@ -17,7 +17,7 @@ const { loadSession } = require('./utils');
     
 
     //await InstagramBot.login()
-    await InstagramBot.getLastPosts('https://www.instagram.com/shedcluboficial/')
+    await InstagramBot.getLastPosts('shedcluboficial', 'https://www.instagram.com/shedcluboficial/')
     /*await InstagramBot.chat(
         'https://www.instagram.com/shedcluboficial/',
         'Enviando uma mensagem qualquer'

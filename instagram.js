@@ -1,6 +1,8 @@
 
 const fs = require('fs');
-//const path = require('path');
+const dayjs = require('dayjs');
+const path = require('path');
+const { prettyJsonToFile } = require('./utils');
 
 class Instagram {
     
@@ -13,7 +15,8 @@ class Instagram {
     match_img_regex = /.*\.(webp|jpg)/
     clear_image_url_regex = /https\:\/\/|\?.+/g
     images_to_download = []
-
+    path_to_save = path.join('./content', dayjs().format('DD_MM_YYYY'))
+    
     selectors = {
         login: {
             user_input: 'input[name="username"]',
@@ -74,21 +77,29 @@ class Instagram {
         });
     }
 
-    downloadImage({ url, buffer }){
+    checkFolder(){
+        if (!fs.existsSync(this.path_to_save)){
+            fs.mkdirSync(this.path_to_save);
+        }
+    }
+
+    downloadImage({ url, buffer }, prefix){
+
         const [ _, extension] = this.match_img_regex.exec(url);
-        
-        const file_name = this.clearImageUrl(url) + '.'+  extension;
+        const folder_path = `${path.join(this.path_to_save)}/${prefix}-${this.clearImageUrl(url)}.${extension}`
 
         return new Promise((resolve, reject)=>{
-            fs.writeFile(`./content/${this.clearImageUrl(url)}.${extension}`, buffer, 'base64', (err)=>{
+            fs.writeFile(folder_path, buffer, 'base64', (err)=>{
                 err ? reject(err) : resolve()
             });
         })
     }
 
-    async downloadImages(data){
+    async downloadImages(data, prefix = ''){
         const _self = this;
         
+        this.checkFolder()
+
         const images = data.reduce((acc, { image })=>{
 
             const item = _self.images_to_download.find(
@@ -105,7 +116,7 @@ class Instagram {
         }, [])
 
         return await Promise.all(
-            images.map(this.downloadImage.bind(_self))
+            images.map((info)=>(this.downloadImage(info, prefix)))
         )
     }
 
@@ -183,8 +194,6 @@ class Instagram {
             }
 
         },this.selectors.post);
-        
-        console.log(data);
 
         await this.page.click(this.selectors.post.close_btn);
         this.download_images = false;
@@ -207,7 +216,7 @@ class Instagram {
         return data;
     }
 
-    async getLastPosts(profileUrl){
+    async getLastPosts(profile_name, profileUrl){
         if(profileUrl){
             try {
             
@@ -222,9 +231,13 @@ class Instagram {
             
                 
                 const data = await this.getPostDataRecursively(3);
-                console.log(data);
-                this.downloadImages(data);
-                //console.log(data);
+                
+                await this.downloadImages(data, profile_name);
+
+                prettyJsonToFile({
+                    filePath: path.join(this.path_to_save, 'data.json'),
+                    data
+                })
 
                 return data
 

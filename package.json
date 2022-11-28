@@ -9,6 +9,7 @@
   "author": "Dellean Santos",
   "license": "ISC",
   "dependencies": {
+    "dayjs": "^1.11.6",
     "dotenv": "^16.0.3",
     "puppeteer": "^19.3.0"
   }
