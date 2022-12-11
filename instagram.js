@@ -36,6 +36,7 @@ class Instagram {
         },
         chat : {
             textarea: 'section textarea[placeholder="Message..."]',
+            msg_line: 'section div[role="listbox"]'
         }
     }
 
@@ -47,6 +48,7 @@ class Instagram {
 
         this.page.on('response', async (response) => {
             if(_self.download_images){
+
                 const url = response.url();
                 const matches = _self.match_img_regex.exec(url);
                 
@@ -61,6 +63,15 @@ class Instagram {
         });
     }
 
+    imageUrlToPath(url, prefix = ''){
+        const [ _, extension] = this.match_img_regex.exec(url);
+        const folder_path = `${path.join(this.path_to_save)}/${prefix}-${this.clearImageUrl(url)}.${extension}`
+
+        return folder_path
+    }
+    clearImageUrlParams(url){
+        return url.replace(/\?(.*)/g, '')
+    }
     clearImageUrl(url){
         return url
             .replace(this.clear_image_url_regex,'')
@@ -91,8 +102,7 @@ class Instagram {
 
     downloadImage({ url, buffer }, prefix){
 
-        const [ _, extension] = this.match_img_regex.exec(url);
-        const folder_path = `${path.join(this.path_to_save)}/${prefix}-${this.clearImageUrl(url)}.${extension}`
+        const folder_path = this.imageUrlToPath(url, prefix);
 
         return new Promise((resolve, reject)=>{
             fs.writeFile(folder_path, buffer, 'base64', (err)=>{
@@ -106,11 +116,13 @@ class Instagram {
         
         this.checkFolder()
 
+        console.log(`images to download (${data.length}) in ${_self.images_to_download.length} stored`)
+
         const images = data.reduce((acc, { image })=>{
 
             const item = _self.images_to_download.find(
                 ({ url })=>(
-                    url===image
+                    _self.clearImageUrlParams(url) === _self.clearImageUrlParams(image)
                 )
             );
             
@@ -120,6 +132,8 @@ class Instagram {
             
             return acc;
         }, [])
+
+        console.log(`images found in intercept ${images.length}`)
 
         return await Promise.all(
             images.map((info)=>(this.downloadImage(info, prefix)))
@@ -166,7 +180,29 @@ class Instagram {
 
         await this.page.type(this.selectors.chat.textarea, msg);
         await this.page.keyboard.press('Enter');
+        await this.wait(300);
 
+        const msg_sent = await this.page.evaluate(({ query, msg }) => {
+
+            return Array.from(
+                document.querySelectorAll(
+                    query
+                )
+            ).reduce((acc, div)=>{
+                if(div.innerText.trim() === msg){
+                    acc = true;
+                }
+                return acc;
+            }, false)
+            
+
+        }, { query: this.selectors.chat.msg_line, msg })
+        
+        if(msg_sent){
+            console.log('mensagem enviada com sucesso!')
+        } else {
+            console.log('mensagem não confirmada (poder ser que sim ou que não)')
+        }
     }
 
     async closeNotificationModal(){
@@ -176,9 +212,9 @@ class Instagram {
         }
     }
 
-    async getPostData(link){
+    async getPostData(link, profile){
 
-        console.log('getPostData')
+        console.log(`getting data from ${profile}`)
 
         this.download_images = true;
 
@@ -188,8 +224,11 @@ class Instagram {
 
         const data = await this.page.evaluate(({ description, image }) => {
             
-            const _description =  document.querySelector(description).innerText || null;
-            const _image = document.querySelector(image) ? document.querySelector(image).src : null;
+            const description_element = document.querySelector(description);
+            const image_element = document.querySelector(image);
+
+            const _description =  description_element ? description_element.innerText : null;
+            const _image = image_element ? image_element.src : null;
             
             console.log(
                 _description
@@ -208,17 +247,22 @@ class Instagram {
         await this.page.click(this.selectors.post.close_btn);
         this.download_images = false;
 
-        return data
+        return {
+            folder_path: data.image ? this.imageUrlToPath(data.image, profile) : null,
+            ...data
+        }
     }
 
-    async getPostDataRecursively(count){
+    async getPostDataRecursively(count, profile){
         let data = []
+
         const links = await this.page.$$(this.selectors.timeline.post)
 
         while (data.length < count){
             data.push(
                 await this.getPostData(
-                    links[data.length]
+                    links[data.length],
+                    profile
                 )
             )
         }
@@ -226,7 +270,10 @@ class Instagram {
         return data;
     }
 
-    async getLastPosts(profile_name, profileUrl){
+    async getLastPosts(profileUrl){
+
+        const profile_name = profileUrl.replace(/(.*)+.com\/|\//g,'') 
+
         if(profileUrl){
             try {
             
@@ -236,20 +283,25 @@ class Instagram {
                 await this.page.waitForSelector(post);
                 
                 await this.wait(500);
-
-                //await this.closeNotificationModal();
             
                 
-                const data = await this.getPostDataRecursively(3);
+                const posts = await this.getPostDataRecursively(3, profile_name);
                 
-                await this.downloadImages(data, profile_name);
+                console.log('downloading images...')
+                await this.downloadImages(posts, profile_name);
 
-                prettyJsonToFile({
+
+                /*prettyJsonToFile({
                     filePath: path.join(this.path_to_save, 'data.json'),
-                    data
-                })
+                    data: 
+                })*/
 
-                return data
+                return {
+                    profile_name,
+                    profileUrl,
+                    scrape_date: dayjs().format('DD/MM/YYYY'),
+                    posts
+                }
 
 
             } catch (e) {

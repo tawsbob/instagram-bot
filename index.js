@@ -4,28 +4,39 @@ dotenv.config()
 const puppeteer = require('puppeteer');
 const Instagram = require('./instagram');
 const { loadSession } = require('./utils');
+const profiles_url = require('./data/profiles');
+
 
 (async () => {
 
     const browser = await puppeteer.launch({ headless: false, userDataDir: './browser-cache', });
     const [ page ] = await browser.pages();
     
-    page.setViewport({ width: 1280, height: 926 });
+    page.setViewport({ width: 1280, height: 600 });
 
     
     const InstagramBot = new Instagram(browser, page)    
     
 
     //await InstagramBot.login()
-    //await InstagramBot.getLastPosts('shedcluboficial', 'https://www.instagram.com/shedcluboficial/')
     
     await page.goto('https://www.instagram.com/')
     await loadSession(page);
+    
+    const data = [];
 
-    await InstagramBot.chat(
-        'shedcluboficial',
-        'Olá!'
-    )
+    while (data.length < profiles_url.length){
+        data.push(
+             await InstagramBot.getLastPosts( profiles_url[data.length])
+        )
+    }
+
+    console.log(data);
+
+    /*await InstagramBot.chat(
+        'king.source.code',
+        'teste de confirmação'
+    )*/
     
    // await browser.close();
   })();

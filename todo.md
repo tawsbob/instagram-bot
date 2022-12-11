@@ -1,0 +1,5 @@
+- [ ] Automatizar o thumb da postagem
+- [ ] Organizar a coleta de dados por perfil par fazer as postagens
+- [ ] Automatizar as postagens do dia
+- [ ] Criar uma interface visual para interagir com o bot
+- [ ] ig_notifications_dismiss sempre para 5 dias no futuro

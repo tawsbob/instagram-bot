@@ -1,3 +1,4 @@
+const dayjs = require('dayjs');
 const fs = require('fs');
 
 const default_encoding = 'utf8';
@@ -7,7 +8,6 @@ const evaluateLocalStorage = (data) => {
     localStorage[key] = value;
     }
 }
-
 
 async function loadSession(page){
     try {
@@ -26,7 +26,11 @@ async function loadSession(page){
 
         await Promise.all([
             page.setCookie(...cookies),
-            page.evaluate(evaluateLocalStorage, localStorage),
+            page.evaluate(evaluateLocalStorage, {
+                ...localStorage,
+                //hack prevent notification pop up to show on screen
+                ig_notifications_dismiss: dayjs().add(5, 'day').valueOf()
+            }),
         ])
 
         
